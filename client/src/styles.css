@@ -1,0 +1,462 @@
+/* ======================================================================= */
+/*  Design System (cores, tipografia e spacing)                            */
+/* ======================================================================= */
+
+:root {
+  /* Cores */
+  --bg: #141414;
+  --panel: #151515;
+  --border: #2A2A2A;
+  --text: #EDEDED;
+  --muted: #BEBEBE;
+  --accent: #687364;
+  --accent-2: #434a40;
+  --danger: #C96C67;
+
+  /* Espaçamentos base (em rem) */
+  --space-1: 0.5rem;  /* 8px   */
+  --space-2: 0.75rem; /* 12px  */
+  --space-3: 1rem;    /* 16px  */
+  --space-4: 1.25rem; /* 20px  */
+  --space-5: 1.5rem;  /* 24px  */
+
+  /* Raios */
+  --radius-sm: 8px;
+  --radius: 8px;
+  --radius-lg: 8px;
+
+  /* Bordas */
+  --border-w: 1px;
+
+  /* Tipografia */
+  --font-body: "Source Sans", "Source Sans 3", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --font-size-base: 1rem;      /* texto normal */
+  --font-size-h: 2rem;         /* h1..h4 */
+  --font-size-card-title: 1.1rem;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-body);
+  font-size: var(--font-size-h);
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ======================================================================= */
+/*  Layout geral                                                            */
+/* ======================================================================= */
+
+.container {
+  max-width: 1900px;
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+.header { margin: var(--space-1) 0 var(--space-2); }
+
+.header h2 {
+  font-size: 2.2rem;
+}
+
+.caption { color: var(--muted); }
+
+/* Separador genérico */
+.divider {
+  border-bottom: var(--border-w) solid var(--border);
+  margin: 0 0 var(--space-3) 0;
+}
+
+/* ======================================================================= */
+/*  Tabs                                                                    */
+/* ======================================================================= */
+
+.tabs {
+  position: relative;
+  display: flex;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--border);
+  z-index: 0; /* linha cinza por baixo */
+}
+
+.tab {
+  position: relative;
+  padding: var(--space-1) 0 calc(var(--space-1) + 2px);
+  cursor: pointer;
+  color: #cfcfcf;
+  user-select: none;
+  transition: color .18s ease;
+  z-index: 1; /* acima da linha cinza */
+}
+.tab.active { color: var(--accent); }
+
+/* indicador verde animado */
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  width: 0;
+  transform: translateX(0);
+  transition:
+    width .24s cubic-bezier(.22,.61,.36,1),
+    transform .24s cubic-bezier(.22,.61,.36,1);
+  z-index: 2; /* acima de tudo */
+  pointer-events: none;
+}
+
+/* ======================================================================= */
+/*  Cards / painéis                                                         */
+/* ======================================================================= */
+
+.panel {
+  background: var(--panel);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+label {
+  display: block;
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+/* ======================================================================= */
+/*  Inputs                                                                  */
+/* ======================================================================= */
+
+.input {
+  width: 100%;
+  background: #121212;
+  color: var(--text);
+  border: var(--border-w) solid #1A1A1A;
+  border-radius: var(--radius-sm);
+  height: 38px;                 /* maior para telas largas */
+  padding: 0 var(--space-3);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+.input:focus {
+  border-color: var(--accent);  /* verde no foco */
+}
+
+/* Wrapper que permite ícone à direita */
+.input-box { position: relative; }
+.input-box.has-eye .input { padding-right: 56px; } /* espaço para o botão */
+
+.input-box .eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%); /* centro exato */
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: .9;
+}
+.input-box .eye:hover { opacity: 1; }
+
+/* SVG importado por <img> */
+.input-box .eye img {
+  width: 22px;
+  height: 22px;
+  filter: invert(100%);      /* branco */
+  pointer-events: none;
+}
+
+.field { position: relative; }
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ======================================================================= */
+/*  Botões                                                                  */
+/* ======================================================================= */
+
+.btn {
+  border: var(--border-w) solid var(--border);
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;         /* maior para telas largas */
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+.btn:hover { background: var(--accent-2); }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+.btn.secondary { background: #222; }
+.btn.full { width: 100%; }
+
+/* Botão sólido (padrão) */
+.btn.btn-solid {
+  background: var(--accent);
+  border: var(--border-w) solid var(--accent);
+  color: #fff;
+  padding: 8px 18px;
+  margin-top: 20px;
+}
+.btn.btn-solid:hover:not(:disabled) {
+  background-color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+/* Botão outline/ghost */
+.btn.btn-outline {
+  background: #151515;        /* fundo do painel */
+  border: var(--border-w) solid #3A3A3A;
+  color: #ffffff;
+  padding: 8px 18px;
+  margin-top: 20px;
+}
+.btn.btn-outline:hover:not(:disabled),
+.btn.btn-outline:focus-visible {
+  background-color: #2B2B2B;
+  outline: none;
+}
+.btn.btn-outline:active:not(:disabled) { background: #111111; }
+
+/* ======================================================================= */
+/*  Toasts                                                                  */
+/* ======================================================================= */
+
+.toast {
+  margin-top: var(--space-3);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: #181818;        /* neutro */
+  color: var(--text);
+  border: var(--border-w) solid var(--border);
+  font-size: 1rem;
+}
+
+.toast-error {
+  background: #432626;
+  color: #ffdede;
+  border: var(--border-w) solid #432626;
+}
+
+/* ======================================================================= */
+/*  HOME Layout                                                             */
+/* ======================================================================= */
+
+.home-topbar {
+  display: flex;
+  align-items: flex-end;       /* Home colado embaixo */
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.home-actions { display: flex; gap: var(--space-3); align-items: center; }
+
+.user-chip {
+  background: #1a1a1a;
+  border: var(--border-w) solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 30px;
+}
+.user-chip .chev { opacity: .7; }
+
+/* bloco do usuário com botão abaixo (quando usado) */
+.user-block {
+  display: flex;
+  flex-direction: column;      /* empilha chip em cima e botão embaixo */
+  gap: var(--space-2);
+  align-items: flex-end;       /* alinha à direita */
+}
+.add-study-btn {
+  padding: 8px 12px;
+  width: auto;                 /* só tamanho do texto */
+}
+
+/* Grid 3x3 com as áreas pedidas */
+.home-grid-areas {
+  display: grid;
+  grid-template-columns: 2.1fr 1.9fr 1fr;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "streak streak streak"   /* L1: constância ocupa as 3 colunas */
+    "painel metas  day"      /* L2 */
+    "painel weekly day";     /* L3 */
+  gap: var(--space-3);       /* 1rem */
+}
+
+/* Cards “pelados” (só estrutura) */
+.card.bare {
+  background: #1A1A1A;
+  border: var(--border-w) solid #2A2A2A;
+  border-radius: var(--radius);
+  padding: var(--space-2);
+}
+
+/* Posicionamento por área */
+.card.bare[data-area="streak"] { grid-area: streak; }
+.card.bare[data-area="painel"] { grid-area: painel; }
+.card.bare[data-area="metas"]  { grid-area: metas;  }
+.card.bare[data-area="weekly"] { grid-area: weekly; }
+.card.bare[data-area="day"]    { grid-area: day;    }
+
+/* Título do card (maior) */
+.card-title {
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-size: var(--font-size-card-title); /* 1.1rem */
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+}
+
+/* Responsivo: empilha em 1 coluna mantendo ordem lógica */
+@media (max-width: 1100px) {
+  .home-grid-areas {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "streak"
+      "painel"
+      "metas"
+      "weekly"
+      "day";
+  }
+}
+
+/* =============== User chip como botão outline (tipo 2) =============== */
+.user-pop { position: relative; }
+
+.user-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;      /* mesmo conforto do botão outline */
+}
+
+/* seta */
+.user-chip-caret {
+  width: 16px;
+  height: 16px;
+  filter: invert(100%);    /* branco */
+  opacity: .9;
+}
+
+/* estado active = mesmo hover do outline */
+.user-chip-btn.active,
+.user-chip-btn:hover,
+.user-chip-btn:focus-visible {
+  background-color: #2B2B2B;   /* igual ao btn-outline:hover */
+  outline: none;
+}
+
+/* =============== Popover =============== */
+.menu-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 14px;
+  width: 200px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  z-index: 30;
+}
+
+/* seta do popover (triângulo) */
+.menu-popover::before {
+  content: "";
+  position: absolute;
+  right: 20px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  background: #1A1A1A;
+  border-left: 1px solid #2A2A2A;
+  border-top: 1px solid #2A2A2A;
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.menu-popover .btn { padding: 8px 12px; }
+
+/* ========================= STREAK ========================= */
+.card.bare[data-area="streak"]{ background:#1A1A1A; border:1px solid var(--border); border-radius:12px; padding:10px 12px 14px 12px }
+
+.streak-bar{ width:100% }
+.streak-row{
+  display:grid;
+  grid-template-columns: repeat(var(--cols, 10), 1fr);
+  direction: rtl;                       
+  overflow: visible;
+}
+
+.streak-cell{
+  width:auto;
+  height:27px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  padding:3px 6px;
+  box-sizing:border-box;
+  border:1px solid #2a2a2a;
+  overflow:visible;
+  direction:ltr; /* conteúdo normal */
+}
+.streak-row .streak-cell:first-child{ border-top-right-radius:6px; border-bottom-right-radius:6px }
+.streak-row .streak-cell:last-child { border-top-left-radius:6px;  border-bottom-left-radius:6px }
+
+.streak-cell.ok   { background:#3C6F63 }
+.streak-cell.ok .ico{ color:#BFE9D7 }
+.streak-cell.fail { background:#6B3B3B }
+.streak-cell.fail .ico{ color:#F5C7C7 }
+.streak-cell.future{ background:#222; color:#BEBEBE } /* blocos vazios antes do cadastro */
+
+
+.streak-caret{
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%); z-index:2;
+  width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #BEBEBE;
+  pointer-events:none; filter:drop-shadow(0 1px 0 rgba(0,0,0,.25));
+}
+
+.ico{ font-weight:700 }

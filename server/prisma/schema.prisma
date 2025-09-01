@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"           // pode trocar para "postgresql" em produção
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  studies      StudyRecord[]
+}
+
+model StudyRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  studyDate  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId, studyDate])
+}

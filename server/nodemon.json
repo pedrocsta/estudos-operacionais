@@ -1,0 +1,5 @@
+{
+  "watch": ["index.js", "prisma"],
+  "ext": "js,json",
+  "ignore": ["../client"]
+}
