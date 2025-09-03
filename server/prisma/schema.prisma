@@ -3,26 +3,84 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"           // pode trocar para "postgresql" em produção
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           String         @id @default(cuid())
+  id           String   @id @default(cuid())
   firstName    String
   lastName     String
-  email        String         @unique
+  email        String   @unique
   passwordHash String
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime @default(now())
+
   studies      StudyRecord[]
+  studyDetails StudyDetail[]
+  subjects     Subject[]
+
+  // back-relation: metas semanais (uma configuração por usuário)
+  weeklyGoalSetting WeeklyGoalSetting?
 }
 
 model StudyRecord {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  studyDate  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  studyDate DateTime
+  createdAt DateTime @default(now())
 
   @@index([userId, studyDate])
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relation para StudyDetail.subject
+  studyDetails StudyDetail[]
+
+  @@unique([userId, name])
+}
+
+model StudyDetail {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  studyDate DateTime @default(now())
+  color     String
+  category  String
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  durationMin    Int
+  content        String
+  questionsRight Int
+  questionsWrong Int
+  pageStart      Int?
+  pageEnd        Int?
+  comment        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, studyDate])
+}
+
+model WeeklyGoalSetting {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  hoursTargetMin  Int @default(0)
+  questionsTarget Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
