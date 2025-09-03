@@ -12,7 +12,11 @@ function ymd(d) {
   return `${yyyy}-${mm}-${dd}`;
 }
 function fmtDateLabel(d) {
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 function fmtHHhMMmin(totalMin) {
   const n = Number(totalMin) || 0;
@@ -20,7 +24,7 @@ function fmtHHhMMmin(totalMin) {
   const m = n % 60;
   return `${String(h).padStart(2, "0")}h${String(m).padStart(2, "0")}min`;
 }
-/* Fallback determinístico de cor (se backend não trouxer subject.color) */
+/* Fallback determinístico de cor */
 function colorFromString(str) {
   const s = String(str || "");
   let hash = 0;
@@ -39,8 +43,10 @@ export default function DailyStudies({ userId }) {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
+    const ctrl = new AbortController();
     try {
+      setLoading(true);
+
       const qs = new URLSearchParams({
         userId,
         from: ymd(cursor),
@@ -49,7 +55,8 @@ export default function DailyStudies({ userId }) {
         limit: "200",
         offset: "0",
       }).toString();
-      const res = await fetch(`${API_BASE}/api/studies?${qs}`);
+
+      const res = await fetch(`${API_BASE}/api/studies?${qs}`, { signal: ctrl.signal });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
 
@@ -74,14 +81,45 @@ export default function DailyStudies({ userId }) {
 
       setRows(Array.from(bySubject.values()));
     } catch (e) {
-      console.error(e);
-      setRows([]);
+      if (e.name !== "AbortError") {
+        console.error(e);
+        setRows([]);
+      }
     } finally {
       setLoading(false);
     }
+    return () => ctrl.abort();
   }, [userId, cursor]);
 
-  useEffect(() => { load(); }, [load]);
+  // carga inicial
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // ouvir os mesmos eventos do Painel
+  useEffect(() => {
+    let t;
+    const schedule = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => load(), 200);
+    };
+
+    const onChange = () => schedule();
+    ["study:created","study:deleted","study:updated",
+     "subject:created","subject:deleted","subject:updated","focus"
+    ].forEach(evt => {
+      window.addEventListener(evt, onChange);
+    });
+
+    return () => {
+      if (t) clearTimeout(t);
+      ["study:created","study:deleted","study:updated",
+       "subject:created","subject:deleted","subject:updated","focus"
+      ].forEach(evt => {
+        window.removeEventListener(evt, onChange);
+      });
+    };
+  }, [load]);
 
   const totalMin = rows.reduce((acc, r) => acc + r.totalMin, 0);
 
@@ -96,7 +134,6 @@ export default function DailyStudies({ userId }) {
     setCursor(d);
   }
 
-  /* ===== Tooltip flutuante (mesmo estilo do wchart__tooltip) ===== */
   function showTip(e, text) {
     const plotEl = chartRef.current;
     const tipEl = tipRef.current;
@@ -146,48 +183,45 @@ export default function DailyStudies({ userId }) {
       </header>
 
       <div className="daily__layout">
-        {/* Donut Chart */}
         <div className="daily__chart" ref={chartRef}>
           <svg viewBox="0 0 36 36" className="donut">
             <circle className="donut-bg" cx="18" cy="18" r="15.915" />
-            {rows.length > 0 ? (() => {
-              let offset = 25;         // começa no topo
-              let used = 0;            // soma acumulada (para fechar o círculo sem buracos por arredondamento)
-              const n = rows.length;
-              return rows.map((r, i) => {
-                const share = totalMin > 0 ? (r.totalMin / totalMin) * 100 : 0;
-                let dash = i < n - 1 ? +share.toFixed(3) : Math.max(0, 100 - used);
-                used += dash;
-
-                const strokeColor = r.color || colorFromString(r.subjectId || r.subject || i);
-
-                const el = (
-                  <circle
-                    key={i}
-                    className="donut-seg"
-                    cx="18"
-                    cy="18"
-                    r="15.915"
-                    strokeDasharray={`${dash} ${100 - dash}`}
-                    strokeDashoffset={offset}
-                    style={{ stroke: strokeColor, strokeLinecap: "butt" }}
-                    onMouseEnter={(e) => showTip(e, r.subject)}
-                    onMouseMove={(e) => showTip(e, r.subject)}
-                    onMouseLeave={hideTip}
-                  />
-                );
-                offset = (offset - dash + 100) % 100;
-                return el;
-              });
-            })() : null}
+            {rows.length > 0
+              ? (() => {
+                  let offset = 25;
+                  let used = 0;
+                  const n = rows.length;
+                  return rows.map((r, i) => {
+                    const share = totalMin > 0 ? (r.totalMin / totalMin) * 100 : 0;
+                    const dash = i < n - 1 ? +share.toFixed(3) : Math.max(0, 100 - used);
+                    used += dash;
+                    const strokeColor = r.color || colorFromString(r.subjectId || r.subject || i);
+                    const el = (
+                      <circle
+                        key={i}
+                        className="donut-seg"
+                        cx="18"
+                        cy="18"
+                        r="15.915"
+                        strokeDasharray={`${dash} ${100 - dash}`}
+                        strokeDashoffset={offset}
+                        style={{ stroke: strokeColor, strokeLinecap: "butt" }}
+                        onMouseEnter={(e) => showTip(e, r.subject)}
+                        onMouseMove={(e) => showTip(e, r.subject)}
+                        onMouseLeave={hideTip}
+                      />
+                    );
+                    offset = (offset - dash + 100) % 100;
+                    return el;
+                  });
+                })()
+              : null}
           </svg>
 
           <div className="donut-center">{fmtHHhMMmin(totalMin)}</div>
-          {/* Tooltip (reutiliza o mesmo CSS do WeeklyStudyChart) */}
           <div ref={tipRef} className="wchart__tooltip" />
         </div>
 
-        {/* Lista de matérias */}
         <div className="daily__list">
           {loading && <p style={{ opacity: 0.8 }}>Carregando…</p>}
           {!loading && rows.length === 0 && (
