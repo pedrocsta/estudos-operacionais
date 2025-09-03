@@ -5,18 +5,38 @@ import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 
 dotenv.config();
+
 const app = express();
 const prisma = new PrismaClient();
 
 const PORT = process.env.PORT || 4000;
-const ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 
-app.use(cors({ origin: ORIGIN, credentials: true }));
+// Suporta múltiplas origens separadas por vírgula (ex.: "http://localhost:5173,https://xxx.pages.dev")
+const ORIGINS =
+  (process.env.CORS_ORIGIN || "http://localhost:5173")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+
+// CORS com lista de origens permitidas
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true); // permite health checks e calls internas
+    if (ORIGINS.includes(origin)) return cb(null, true);
+    return cb(new Error("Origin not allowed by CORS"));
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
+// --- util ---
 const pubUser = ({ passwordHash, ...u }) => u;
 
-/* ----------------- auth ----------------- */
+/* ================== HEALTH ================== */
+app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+
+/* ================== AUTH ================== */
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body || {};
@@ -56,7 +76,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-/* ----------------- subjects ----------------- */
+/* ================== SUBJECTS ================== */
 app.get("/api/subjects", async (req, res) => {
   try {
     const userId = String(req.query.userId || "");
@@ -135,18 +155,13 @@ app.delete("/api/subjects/:id", async (req, res) => {
   }
 });
 
-/* ----------------- studies (StudyDetail) ----------------- */
-
-/** Converte "HH:MM:SS" para minutos inteiros */
+/* ================== STUDIES (StudyDetail) ================== */
 function hmsToMinutes(hms) {
   const m = /^(\d{2}):(\d{2}):(\d{2})$/.exec(String(hms || ""));
   if (!m) return null;
   const h = Number(m[1]), mm = Number(m[2]), s = Number(m[3]);
   return Math.floor(h * 60 + mm + s / 60);
 }
-
-/* ADIÇÃO: parser flexível e suporte a durationMin */
-/** Aceita "HH:MM:SS" ou "HH:MM" (retorna minutos ou null) */
 function parseFlexibleHmsToMinutes(hms) {
   if (hms == null) return null;
   const str = String(hms);
@@ -165,22 +180,21 @@ function parseFlexibleHmsToMinutes(hms) {
   return null;
 }
 
-/** POST /api/studies  -> cria um StudyDetail */
 app.post("/api/studies", async (req, res) => {
   try {
     const {
       userId,
       subjectId,
       category,
-      duration,       // "HH:MM:SS" (opcional se enviar durationMin)
-      durationMin: durationMinFromBody, // aceitar minutos direto
+      duration,
+      durationMin: durationMinFromBody,
       content,
       questionsRight,
       questionsWrong,
       pageStart,
       pageEnd,
       comment,
-      studyDate,      // "YYYY-MM-DD"
+      studyDate,
     } = req.body || {};
 
     if (!userId) return res.status(400).json({ error: "userId é obrigatório" });
@@ -239,7 +253,6 @@ app.post("/api/studies", async (req, res) => {
   }
 });
 
-/* ----------------- util: dias estudados ----------------- */
 app.get("/api/studies/days", async (req, res) => {
   try {
     const { userId } = req.query;
@@ -295,7 +308,6 @@ app.get("/api/studies/days", async (req, res) => {
   }
 });
 
-// LISTAR STUDIES (StudyDetail)
 app.get("/api/studies", async (req, res) => {
   try {
     const userId = String(req.query.userId || "");
@@ -332,20 +344,13 @@ app.get("/api/studies", async (req, res) => {
       prisma.studyDetail.count({ where }),
     ]);
 
-    res.json({
-      total,
-      limit,
-      offset,
-      order,
-      items,
-    });
+    res.json({ total, limit, offset, order, items });
   } catch (e) {
     console.error("GET /api/studies failed:", e);
     res.status(500).json({ error: "Erro ao listar estudos" });
   }
 });
 
-/* DELETE /api/studies/:id */
 app.delete("/api/studies/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -360,9 +365,7 @@ app.delete("/api/studies/:id", async (req, res) => {
   }
 });
 
-/* ============ ADIÇÃO: metas semanais (fixas) por usuário ============ */
-
-// GET /api/goals/weekly-setting?userId=...
+/* ================== GOALS (Weekly fixed) ================== */
 app.get("/api/goals/weekly-setting", async (req, res) => {
   try {
     const userId = String(req.query.userId || "");
@@ -379,7 +382,6 @@ app.get("/api/goals/weekly-setting", async (req, res) => {
   }
 });
 
-// PUT /api/goals/weekly-setting  { userId, hoursTargetMin, questionsTarget }
 app.put("/api/goals/weekly-setting", async (req, res) => {
   try {
     const { userId, hoursTargetMin, questionsTarget } = req.body || {};
@@ -399,8 +401,8 @@ app.put("/api/goals/weekly-setting", async (req, res) => {
     res.status(500).json({ error: "Erro ao salvar metas" });
   }
 });
-/* ========================== FIM ADIÇÃO ========================== */
 
-app.listen(PORT, () => {
-  console.log(`Server on http://localhost:${PORT}`);
+/* ================== START ================== */
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server on http://0.0.0.0:${PORT}`);
 });
