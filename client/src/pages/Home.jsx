@@ -1,15 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AngleDown from "../assets/angle-down.svg";
-import AngleUp from "../assets/angle-up.svg";
+
 import Streak from "../components/StreakCard.jsx";
 import Painel from "../components/Painel.jsx";
 import AddStudyDialog from "../components/AddStudyDialog.jsx";
-import AngleRight from "../assets/angle-right.svg";
-import TrashIcon from "../assets/trash.svg";
 import WeeklyGoals from "../components/WeeklyGoals.jsx";
 import WeeklyStudyChart from "../components/WeeklyStudyChart.jsx";
 import DailyStudies from "../components/DailyStudies.jsx";
+import StudyTimerDialog from "../components/StudyTimerDialog.jsx";
+
+import AngleRight from "../assets/icons/angle-right.svg";
+import TrashIcon from "../assets/icons/trash.svg";
+import AngleDown from "../assets/icons/angle-down.svg";
+import AngleUp from "../assets/icons/angle-up.svg";
+
+import PlayIcon from "../assets/icons/play.svg";
+import PauseIcon from "../assets/icons/pause.svg";
+import StopIcon from "../assets/icons/stop.svg";
+import RestartIcon from "../assets/icons/restart.svg";
+import MaximizeIcon from "../assets/icons/maximize.svg";
 
 const API_BASE = import.meta.env.VITE_API_URL || ""; // "" => mesmo host (proxy)
 
@@ -23,6 +32,14 @@ function fmtDuration(min) {
   return `${m}min`;
 }
 
+// util: segundos -> HH:MM:SS
+function fmtHMS(tSec) {
+  const h = Math.floor(tSec / 3600).toString().padStart(2, "0");
+  const m = Math.floor((tSec % 3600) / 60).toString().padStart(2, "0");
+  const s = Math.floor(tSec % 60).toString().padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
 export default function Home() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
@@ -30,6 +47,25 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const popRef = useRef(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  // ===== Timer controlado no Home (sincroniza com o dialog) =====
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0); // em segundos
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (!running) return;
+    intervalRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(intervalRef.current);
+  }, [running]);
+
+  const onToggle = () => setRunning((v) => !v);
+  const onReset = () => setElapsed(0);
+
+  const [showTimer, setShowTimer] = useState(false);
+
+  // duração para pré-preencher o AddStudyDialog quando vier do cronômetro
+  const [prefillDuration, setPrefillDuration] = useState("00:00:00");
 
   useEffect(() => {
     function onClickOutside(e) {
@@ -45,6 +81,20 @@ export default function Home() {
     setOpen(false);
     navigate("/");
   };
+
+  // STOP: abre AddStudyDialog por cima (sem fechar o timer)
+  function handleStopFromToolbar() {
+    setPrefillDuration(fmtHMS(elapsed));
+    setShowDialog(true);
+    setRunning(false);
+  }
+
+  // STOP vindo do dialog (expando → stop lá em cima)
+  function handleStopFromTimerDialog(hhmmss) {
+    setPrefillDuration(hhmmss || fmtHMS(elapsed));
+    setShowDialog(true);
+    setRunning(false);
+  }
 
   return (
     <div className="container">
@@ -95,9 +145,87 @@ export default function Home() {
             )}
           </div>
 
-          <button className="btn btn-solid add-study-btn" onClick={() => setShowDialog(true)}>
-            Adicionar Estudo
-          </button>
+          {/* ===== Toolbar em CONTAINER (#1A1A1A) antes do Adicionar Estudo ===== */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Container dos botões */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: 5,
+                background: "#1A1A1A",
+                borderRadius: 8,
+                border: "none",
+              }}
+            >
+              {/* Play/Pause (mesmo estilo do diálogo) */}
+              <button
+                className={`btn-dialog-time ${running ? "pause-btn-dialog" : "play-btn-dialog"}`}
+                onClick={onToggle}
+                title={running ? "Pausar" : "Iniciar"}
+                aria-label={running ? "Pausar" : "Iniciar"}
+              >
+                <img src={running ? PauseIcon : PlayIcon} alt=""/>
+              </button>
+
+              {/* Stop */}
+              <button
+                className="btn-dialog-time"
+                onClick={handleStopFromToolbar}
+                title="Parar e salvar"
+                aria-label="Parar e salvar"
+              >
+                <img src={StopIcon} alt="" />
+              </button>
+
+              {/* Restart */}
+              <button
+                className="btn-dialog-time"
+                onClick={onReset}
+                disabled={elapsed === 0}
+                title="Reiniciar"
+                aria-label="Reiniciar"
+                style={{
+                  opacity: elapsed === 0 ? 0.5 : 1,
+                }}
+              >
+                <img src={RestartIcon} alt="" />
+              </button>
+
+              {/* Tempo */}
+              <div
+                style={{
+                  fontSize: 24,
+                }}
+                aria-label="Tempo decorrido"
+              >
+                {fmtHMS(elapsed)}
+              </div>
+
+              {/* Expandir (abre dialog sincronizado) */}
+              <button
+                className="btn-dialog-time"
+                onClick={() => setShowTimer(true)}
+                title="Expandir cronômetro"
+                aria-label="Expandir cronômetro"
+              >
+                <img src={MaximizeIcon} alt="" />
+              </button>
+            </div>
+
+            {/* Adicionar Estudo (fora do container) */}
+            <button
+              className="btn btn-solid add-study-btn"
+              onClick={() => {
+                setPrefillDuration("00:00:00");
+                setShowDialog(true);
+              }}
+              style={{ marginLeft: 4 }}
+            >
+              Adicionar Estudo
+            </button>
+          </div>
         </div>
       </div>
 
@@ -127,13 +255,28 @@ export default function Home() {
 
       {/* LISTA INLINE – ao final da página */}
       <section className="card bare" style={{ marginTop: 24 }}>
-        <h3 className="card-title" style={{marginBottom: 16}}>Meus Registros de Estudo</h3>
+        <h3 className="card-title" style={{ marginBottom: 16 }}>Meus Registros de Estudo</h3>
         <StudiesInline userId={user?.id} />
       </section>
 
-      {/* Dialog */}
+      {/* Dialogs (sincronizados) */}
+      {showTimer && (
+        <StudyTimerDialog
+          onClose={() => setShowTimer(false)}
+          onStop={handleStopFromTimerDialog}
+          elapsed={elapsed}
+          running={running}
+          onToggle={onToggle}
+          onReset={onReset}
+        />
+      )}
+
       {showDialog && (
-        <AddStudyDialog onClose={() => setShowDialog(false)} userId={user?.id} />
+        <AddStudyDialog
+          onClose={() => setShowDialog(false)}
+          userId={user?.id}
+          initialDuration={prefillDuration}
+        />
       )}
     </div>
   );
@@ -153,7 +296,6 @@ function StudiesInline({ userId }) {
       setLoading(true);
       setErr("");
 
-      // utiliza o contrato do teu endpoint (objeto com items)
       const qs = new URLSearchParams({
         userId,
         order: "desc",
@@ -176,12 +318,10 @@ function StudiesInline({ userId }) {
     }
   }, [userId]);
 
-  // carga inicial
   useEffect(() => {
     fetchList();
   }, [fetchList]);
 
-  // realtime: refetch quando algo muda
   useEffect(() => {
     const onChange = () => fetchList();
     window.addEventListener("study:created", onChange);
@@ -224,7 +364,6 @@ function StudiesInline({ userId }) {
 function StudyAccordionItem({ item, onDelete }) {
   const [open, setOpen] = useState(false);
 
-  // item.subject já vem no include do endpoint
   const subjectName = item.subject?.name || item.subjectName || "";
   const headerText = `${(item.studyDate || "").slice(0, 10)} - ${labelFromCategory(
     item.category

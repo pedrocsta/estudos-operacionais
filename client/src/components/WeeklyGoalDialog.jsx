@@ -10,31 +10,6 @@ export default function WeeklyGoalDialog({ userId, onClose }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  // outside click / esc
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
-    function isEventInside(node, e) {
-      const path = typeof e.composedPath === "function" ? e.composedPath() : undefined;
-      if (Array.isArray(path) && path.length) return path.includes(node);
-      return node?.contains(e.target);
-    }
-    let ignoreFirstClick = true;
-    const unsetIgnore = setTimeout(() => { ignoreFirstClick = false; }, 0);
-    function onClickOutside(e) {
-      if (ignoreFirstClick) return;
-      if (!panelRef.current) return;
-      if (isEventInside(panelRef.current, e)) return;
-      onClose?.();
-    }
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("click", onClickOutside);
-    return () => {
-      clearTimeout(unsetIgnore);
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("click", onClickOutside);
-    };
-  }, [onClose]);
-
   // carregar metas atuais (0 por padrão se não tiver)
   useEffect(() => {
     let cancelled = false;

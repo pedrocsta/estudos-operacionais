@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import AngleLeft from "../assets/angle-left.svg";
-import AngleRight from "../assets/angle-right.svg";
+import AngleLeft from "../assets/icons/angle-left.svg";
+import AngleRight from "../assets/icons/angle-right.svg";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 

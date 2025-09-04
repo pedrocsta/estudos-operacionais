@@ -498,7 +498,6 @@ label {
   position:fixed; inset:0;
   background:rgba(0,0,0,.55);
   display:grid; place-items:center;
-  padding:24px;
   z-index:1000;
 }
 
@@ -1265,3 +1264,108 @@ label {
   opacity: 0.7;
   margin: 0 8px;
 }
+
+.play-btn{
+  width: 40px;
+  height: 40px;
+}
+
+.play-btn img{
+  width: 18px;
+  height: 18px;
+  filter: invert(100%);
+  pointer-events: none;
+}
+
+.btn-dialog-time {
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 1rem;
+  padding: 0;
+
+  /* centralização */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-dialog-time:hover {
+  background-color: #2B2B2B;
+}
+
+.btn-dialog-time img {
+  filter: invert(100%);
+  width: 20px;
+  height: 20px;
+}
+
+.play-btn-dialog {
+  background-color: #687364;
+}
+
+.btn-dialog-time.play-btn-dialog:hover{
+  background-color: #434a40;
+}
+
+.pause-btn-dialog {
+  background-color: #8a3a3a; /* vermelho base */
+}
+
+.btn-dialog-time.pause-btn-dialog:hover {
+  background-color: #5c2727;
+}
+
+.time {
+  font-size: 60px;
+  font-family: var(--font-body);
+}
+
+.dialog-time{
+  background-color: #1A1A1A !important;
+}
+
+/* timer no fundo */
+.rs-overlay.dialog-time {
+  z-index: 1000;
+}
+
+/* add-study por cima */
+.rs-overlay.add-study {
+  z-index: 1100;
+}
+
+/* base do botão “redondo retangular” dos ícones */
+.btn-dialog-time {
+  border: none;
+  background: transparent;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.btn-dialog-time img {
+  width: 18px;
+  height: 18px;
+  filter: invert(100%);
+}
+.btn-dialog-time:disabled {
+  cursor: not-allowed;
+}
+
+/* play / pause (cores que você mandou) */
+.play-btn-dialog { background-color: #687364; }
+.btn-dialog-time.play-btn-dialog:hover { background-color: #434a40; }
+
+.pause-btn-dialog { background-color: #8a3a3a; }
+.btn-dialog-time.pause-btn-dialog:hover { background-color: #5c2727; }
+
+/* hover dos demais */
+.btn-dialog-time:hover { background-color: #2B2B2B; }

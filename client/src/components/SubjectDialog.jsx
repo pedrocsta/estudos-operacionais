@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import SaveIcon from "../assets/save.svg";
-import TrashIcon from "../assets/trash.svg";
+import SaveIcon from "../assets/icons/save.svg";
+import TrashIcon from "../assets/icons/trash.svg";
 
 const API_BASE = import.meta.env.VITE_API_URL || ""; // "" => mesmo host (se tiver proxy)
 

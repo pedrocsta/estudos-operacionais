@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import EyeIcon from "../../assets/eye.svg";
-import EyeOffIcon from "../../assets/eye-off.svg";
+import EyeIcon from "../../assets/icons/eye.svg";
+import EyeOffIcon from "../../assets/icons/eye-off.svg";
 
 const PasswordInput = React.forwardRef(({ label, error, ...props }, ref) => {
   const [show, setShow] = useState(false);

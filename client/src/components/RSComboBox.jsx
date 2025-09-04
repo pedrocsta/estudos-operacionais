@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import AngleDown from "../assets/angle-down.svg";
+import AngleDown from "../assets/icons/angle-down.svg";
 
 export default function RSComboBox({
   options = [],

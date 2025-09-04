@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import GearIcon from "../assets/gear.svg";
+import GearIcon from "../assets/icons/gear.svg";
 import WeeklyGoalDialog from "./WeeklyGoalDialog.jsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";

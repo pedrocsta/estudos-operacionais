@@ -76,6 +76,26 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // apague dependências antes (ex.: studies, subjects) se houver FKs sem cascade
+    await prisma.studyDetail.deleteMany({ where: { userId: id } });
+    await prisma.subject.deleteMany({ where: { userId: id } });
+    // se houver outros relacionamentos, limpe-os aqui
+
+    await prisma.user.delete({ where: { id } });
+
+    res.json({ ok: true });
+  } catch (e) {
+    if (e && e.code === "P2025") return res.status(404).json({ error: "Usuário não encontrado" });
+    console.error("DELETE /api/users/:id failed:", e);
+    res.status(500).json({ error: "Erro ao excluir usuário" });
+  }
+});
+
+
 /* ================== SUBJECTS ================== */
 app.get("/api/subjects", async (req, res) => {
   try {

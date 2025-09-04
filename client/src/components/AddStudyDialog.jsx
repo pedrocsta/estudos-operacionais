@@ -4,39 +4,9 @@ import SubjectDialog from "./SubjectDialog";
 
 const API_BASE = import.meta.env.VITE_API_URL || ""; // "" => mesmo host (proxy)
 
-export default function AddStudyDialog({ onClose, userId }) {
+export default function AddStudyDialog({ onClose, userId, initialDuration = "00:00:00" }) {
   const panelRef = useRef(null);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
-
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose(); }
-
-    function isEventInside(node, e) {
-      const path = typeof e.composedPath === "function" ? e.composedPath() : undefined;
-      if (Array.isArray(path) && path.length) return path.includes(node);
-      return node?.contains(e.target);
-    }
-
-    let ignoreFirstClick = true;
-    const unsetIgnore = setTimeout(() => { ignoreFirstClick = false; }, 0);
-
-    function onClickOutside(e) {
-      if (ignoreFirstClick) return;
-      if (showSubjectDialog) return;
-      if (!panelRef.current) return;
-      if (isEventInside(panelRef.current, e)) return;
-      onClose();
-    }
-
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("click", onClickOutside);
-
-    return () => {
-      clearTimeout(unsetIgnore);
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("click", onClickOutside);
-    };
-  }, [onClose, showSubjectDialog]);
 
   // ----------------- datas em HORÁRIO LOCAL -----------------
   function ymdLocal(d = new Date()) {
@@ -62,6 +32,13 @@ export default function AddStudyDialog({ onClose, userId }) {
     pageEnd: 0,
     comment: "",
   });
+
+  // 👉 sincroniza o tempo vindo do cronômetro
+  useEffect(() => {
+    // garante string HH:MM:SS para o <input type="time">
+    const v = String(initialDuration || "00:00:00");
+    setForm((f) => ({ ...f, duration: v }));
+  }, [initialDuration]);
 
   function setField(name, value) { setForm((f) => ({ ...f, [name]: value })); }
   function inc(name) { setForm((f) => ({ ...f, [name]: (Number(f[name]) || 0) + 1 })); }
@@ -173,7 +150,7 @@ export default function AddStudyDialog({ onClose, userId }) {
 
   return (
     <>
-      <div className="rs-overlay">
+      <div className="rs-overlay add-study">
         <div
           className="rs-dialog"
           ref={panelRef}
