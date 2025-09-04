@@ -96,6 +96,38 @@ export default function Home() {
     setRunning(false);
   }
 
+  // ===== Excluir conta =====
+  const [deleting, setDeleting] = useState(false);
+  async function handleDeleteAccount() {
+    if (!user?.id) return alert("Sessão inválida.");
+    const ok = window.confirm(
+      "Tem certeza que deseja excluir sua conta? Essa ação é permanente e não pode ser desfeita."
+    );
+    if (!ok) return;
+
+    try {
+      setDeleting(true);
+      const resp = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const msg = payload?.error || payload?.message || `Erro ao excluir conta (HTTP ${resp.status}).`;
+        alert(msg);
+        return;
+      }
+      // limpa sessão e vai para a tela inicial
+      localStorage.removeItem("user");
+      navigate("/");
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível excluir a conta.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="container">
       {/* TOPBAR */}
@@ -258,6 +290,20 @@ export default function Home() {
         <h3 className="card-title" style={{ marginBottom: 16 }}>Meus Registros de Estudo</h3>
         <StudiesInline userId={user?.id} />
       </section>
+
+      {/* ===== Botão Excluir conta (outline, 100% width) ===== */}
+      <div style={{ marginTop: 16 }}>
+        <button
+          className="btn btn-outline"
+          onClick={handleDeleteAccount}
+          disabled={deleting}
+          style={{ width: "100%", color: "#8a3a3a", borderColor: "#8a3a3a" }}
+          title="Excluir conta permanentemente"
+          aria-label="Excluir conta"
+        >
+          {deleting ? "Excluindo..." : "Excluir conta"}
+        </button>
+      </div>
 
       {/* Dialogs (sincronizados) */}
       {showTimer && (
