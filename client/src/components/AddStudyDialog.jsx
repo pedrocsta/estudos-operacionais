@@ -150,7 +150,7 @@ export default function AddStudyDialog({ onClose, userId, initialDuration = "00:
 
   return (
     <>
-      <div className="rs-overlay add-study">
+      <div className="rs-overlay">
         <div
           className="rs-dialog"
           ref={panelRef}

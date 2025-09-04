@@ -1333,11 +1333,6 @@ label {
   z-index: 1000;
 }
 
-/* add-study por cima */
-.rs-overlay.add-study {
-  z-index: 1100;
-}
-
 /* base do botão “redondo retangular” dos ícones */
 .btn-dialog-time {
   border: none;
