@@ -77,23 +77,31 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 app.delete("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-
-    // apague dependências antes (ex.: studies, subjects) se houver FKs sem cascade
-    await prisma.studyDetail.deleteMany({ where: { userId: id } });
-    await prisma.subject.deleteMany({ where: { userId: id } });
-    // se houver outros relacionamentos, limpe-os aqui
-
-    await prisma.user.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      // apague *todas* as dependências do usuário
+      await tx.studyDetail.deleteMany({ where: { userId: id } });
+      await tx.studyRecord.deleteMany({ where: { userId: id } });
+      await tx.weeklyGoalSetting.deleteMany({ where: { userId: id } });
+      await tx.subject.deleteMany({ where: { userId: id } });
+      await tx.user.delete({ where: { id } });
+    });
 
     res.json({ ok: true });
   } catch (e) {
-    if (e && e.code === "P2025") return res.status(404).json({ error: "Usuário não encontrado" });
+    if (e?.code === "P2025") {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+    if (e?.code === "P2003") {
+      // FK ainda existente em alguma tabela
+      return res.status(409).json({ error: "Não foi possível excluir: existem dados vinculados ao usuário." });
+    }
     console.error("DELETE /api/users/:id failed:", e);
     res.status(500).json({ error: "Erro ao excluir usuário" });
   }
 });
+
 
 
 /* ================== SUBJECTS ================== */
