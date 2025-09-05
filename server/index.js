@@ -25,7 +25,8 @@ app.use(cors({
     if (ORIGINS.includes(origin)) return cb(null, true);
     return cb(new Error("Origin not allowed by CORS"));
   },
-  credentials: true
+  credentials: true,
+  allowedHeaders: ["Content-Type", "x-admin-email"], // garante o header customizado
 }));
 
 app.use(express.json());
@@ -102,6 +103,26 @@ app.delete("/api/users/:id", async (req, res) => {
   }
 });
 
+app.get("/api/stats/overview", async (req, res) => {
+  try {
+    // proteção simples por e-mail vindo do header (evita expor publicamente)
+    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase();
+    const requester = String(req.header("x-admin-email") || "").toLowerCase();
+    if (!adminEmail || requester !== adminEmail) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const [usersCount, agg] = await Promise.all([
+      prisma.user.count(),
+      prisma.studyDetail.aggregate({ _sum: { durationMin: true } }),
+    ]);
+
+    res.json({ usersCount, totalMinutes: agg?._sum?.durationMin || 0 });
+  } catch (e) {
+    console.error("GET /api/stats/overview failed:", e);
+    res.status(500).json({ error: "Erro ao carregar estatísticas" });
+  }
+});
 
 
 /* ================== SUBJECTS ================== */

@@ -96,6 +96,47 @@ export default function Home() {
     setRunning(false);
   }
 
+  /* ================== ESTATÍSTICAS (somente para MASTER) ================== */
+  const isMaster =
+    typeof user?.email === "string" &&
+    user.email.toLowerCase() === "pedrohdcosta@outlook.com";
+
+  const [stats, setStats] = useState({ usersCount: 0, totalMinutes: 0 });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsErr, setStatsErr] = useState("");
+
+  useEffect(() => {
+    if (!open || !isMaster) return; // só busca se o popover abrir E for master
+    let aborted = false;
+
+    async function fetchStats() {
+      try {
+        setStatsLoading(true);
+        setStatsErr("");
+        const res = await fetch(`${API_BASE}/api/stats/overview`, {
+          headers: { "x-admin-email": "pedrohdcosta@outlook.com" },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+        if (!aborted) {
+          setStats({
+            usersCount: Number(data?.usersCount) || 0,
+            totalMinutes: Number(data?.totalMinutes) || 0,
+          });
+        }
+      } catch (e) {
+        console.error(e);
+        if (!aborted) setStatsErr("Não foi possível carregar as estatísticas.");
+      } finally {
+        if (!aborted) setStatsLoading(false);
+      }
+    }
+
+    fetchStats();
+    return () => { aborted = true; };
+  }, [open, isMaster]);
+  /* ================== FIM ESTATÍSTICAS MASTER ================== */
+
   // ===== Excluir conta =====
   const [deleting, setDeleting] = useState(false);
   async function handleDeleteAccount() {
@@ -157,6 +198,30 @@ export default function Home() {
 
             {open && (
               <div className="menu-popover" role="menu">
+                {/* ====== MOSTRA SÓ PARA O MASTER ====== */}
+                {isMaster && (
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#aaa",
+                      marginBottom: "8px",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {statsLoading && <div>Carregando estatísticas…</div>}
+                    {!statsLoading && statsErr && (
+                      <div style={{ color: "#ff9b9b" }}>{statsErr}</div>
+                    )}
+                    {!statsLoading && !statsErr && (
+                      <>
+                        <div>Total de usuários: <b>{stats.usersCount}</b></div>
+                        <div>Horas estudadas (total): <b>{fmtDuration(stats.totalMinutes)}</b></div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* ====== FIM BLOCO MASTER ====== */}
+
                 {user?.id && (
                   <div
                     style={{
