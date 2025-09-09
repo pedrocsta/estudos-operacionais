@@ -44,9 +44,9 @@ export default function Home() {
   const [showTimer, setShowTimer] = useState(false);
 
   // ===== Timer compartilhado (fonte única) =====
-  const { running, elapsedSec, onToggle, onReset, stop } = useSharedTimer({
+  const { running, elapsedSec, onToggle, onReset, stop, syncNow } = useSharedTimer({
     onStop: (hhmmss) => {
-      // STOP vindo do dialog de timer
+      // STOP vindo do dialog de timer → abre form já preenchido
       setPrefillDuration(hhmmss);
       setShowDialog(true);
     },
@@ -55,6 +55,7 @@ export default function Home() {
   // duração para pré-preencher o AddStudyDialog quando vier do cronômetro
   const [prefillDuration, setPrefillDuration] = useState("00:00:00");
 
+  // fechar popover fora do clique
   useEffect(() => {
     function onClickOutside(e) {
       if (!popRef.current) return;
@@ -70,11 +71,24 @@ export default function Home() {
     navigate("/");
   };
 
-  // STOP pela toolbar do Home → consolida, abre AddStudyDialog
+  // STOP pela toolbar do Home → consolida e abre o diálogo de estudo
   function handleStopFromToolbar() {
     setPrefillDuration(fmtHMS(elapsedSec));
     stop(); // consolida e pausa
     setShowDialog(true);
+  }
+
+  // STOP vindo do dialog (mantém compatibilidade)
+  function handleStopFromTimerDialog(hhmmss) {
+    setPrefillDuration(hhmmss || fmtHMS(elapsedSec));
+    setShowDialog(true);
+  }
+
+  // Maximizar: rebroadcast imediato do estado e só então abrir o dialog
+  // Isso impede “zerar/pausar” ao abrir — o dialog hidrata com o estado atual.
+  function handleMaximize() {
+    syncNow();          // <-- envia estado atual (running + tempos)
+    setShowTimer(true); // abre o dialog sem pausar/resetar
   }
 
   /* ================== ESTATÍSTICAS (somente para MASTER) ================== */
@@ -282,7 +296,7 @@ export default function Home() {
               {/* Expandir (abre dialog sincronizado) */}
               <button
                 className="btn-dialog-time"
-                onClick={() => setShowTimer(true)}
+                onClick={handleMaximize}   // <-- usa syncNow() antes de abrir
                 title="Expandir cronômetro"
                 aria-label="Expandir cronômetro"
               >
@@ -353,11 +367,7 @@ export default function Home() {
       {showTimer && (
         <StudyTimerDialog
           onClose={() => setShowTimer(false)}
-          onStop={(hhmmss) => {
-            // mantém compatibilidade: se o dialog der stop, já abre o AddStudyDialog
-            setPrefillDuration(hhmmss || fmtHMS(elapsedSec));
-            setShowDialog(true);
-          }}
+          onStop={handleStopFromTimerDialog}
         />
       )}
 

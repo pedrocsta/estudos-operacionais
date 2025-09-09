@@ -33,15 +33,16 @@ export function fmtHMS(tSec) {
 }
 
 /**
- * Hook de timer compartilhado entre Home e Dialog:
+ * Hook de timer compartilhado:
  * - Persistência em localStorage
- * - Sincronização em tempo real via BroadcastChannel (entre abas)
- * - Fallback via CustomEvent na mesma aba
- * - Atualização visual suave via requestAnimationFrame quando running=true
+ * - Sync entre abas via BroadcastChannel
+ * - Fallback na mesma aba via CustomEvent
+ * - Atualização visual suave via RAF quando running=true
+ * - Exponho syncNow() para rebroadcast imediato (usado ao abrir o Dialog)
  */
 export default function useSharedTimer({ onStop } = {}) {
-  const [baseElapsedMs, setBaseElapsedMs] = useState(0); // acumulado “congelado”
-  const [startMs, setStartMs] = useState(null);          // início da corrida atual (se running)
+  const [baseElapsedMs, setBaseElapsedMs] = useState(0); // acumulado
+  const [startMs, setStartMs] = useState(null);          // início desta corrida
   const [running, setRunning] = useState(false);
 
   // tick visual
@@ -93,15 +94,20 @@ export default function useSharedTimer({ onStop } = {}) {
     };
   }, []);
 
-  // persiste + broadcast a cada mudança
-  useEffect(() => {
-    const state = { baseElapsedMs, startMs, running };
-    saveState(state);
+  // função de broadcast (canal + fallback)
+  const broadcast = useCallback((state) => {
     if (bcRef.current) {
       bcRef.current.postMessage({ type: "timer-sync", payload: state });
     }
     window.dispatchEvent(new CustomEvent("timer-sync", { detail: state }));
-  }, [baseElapsedMs, startMs, running]);
+  }, []);
+
+  // persiste + broadcast a cada mudança
+  useEffect(() => {
+    const state = { baseElapsedMs, startMs, running };
+    saveState(state);
+    broadcast(state);
+  }, [baseElapsedMs, startMs, running, broadcast]);
 
   // animação enquanto rodando
   useEffect(() => {
@@ -175,6 +181,18 @@ export default function useSharedTimer({ onStop } = {}) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [baseElapsedMs, startMs, running]);
 
+  /**
+   * Rebroadcast imediato do estado atual (útil antes de abrir o Dialog).
+   * Garante que o componente que montar em seguida hidrate com os valores correntes
+   * mesmo se o último broadcast tiver sido há algum tempo.
+   */
+  const syncNow = useCallback(() => {
+    const state = { baseElapsedMs, startMs, running };
+    // salva de novo e emite
+    saveState(state);
+    broadcast(state);
+  }, [baseElapsedMs, startMs, running, broadcast]);
+
   return {
     running,
     elapsedSec,
@@ -182,5 +200,6 @@ export default function useSharedTimer({ onStop } = {}) {
     onToggle,
     onReset,
     stop,
+    syncNow, // ← exposto para o Home usar antes de abrir o Dialog
   };
 }

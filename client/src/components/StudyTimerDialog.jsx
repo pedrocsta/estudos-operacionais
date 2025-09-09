@@ -9,6 +9,7 @@ import useSharedTimer, { fmtHMS } from "../hooks/useSharedTimer.js";
 const logoSrc = "/logo.png";
 
 export default function StudyTimerDialog({ onClose, onStop }) {
+  // Lê o MESMO estado compartilhado (não cria estado próprio!)
   const { running, elapsedSec, onToggle, onReset, stop } = useSharedTimer({ onStop });
 
   return (
