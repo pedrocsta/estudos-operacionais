@@ -33,17 +33,15 @@ export function fmtHMS(tSec) {
 }
 
 /**
- * Hook de timer compartilhado:
- * - Persistência em localStorage
- * - Sync entre abas via BroadcastChannel
- * - Fallback na mesma aba via CustomEvent
- * - Atualização visual suave via RAF quando running=true
- * - Exponho syncNow() para rebroadcast imediato (usado ao abrir o Dialog)
+ * Hook de timer compartilhado e persistente.
+ * Correção principal: só persiste/broadcast DEPOIS da hidratação inicial (flag `hydrated`).
  */
 export default function useSharedTimer({ onStop } = {}) {
-  const [baseElapsedMs, setBaseElapsedMs] = useState(0); // acumulado
-  const [startMs, setStartMs] = useState(null);          // início desta corrida
+  const [baseElapsedMs, setBaseElapsedMs] = useState(0);
+  const [startMs, setStartMs] = useState(null);
   const [running, setRunning] = useState(false);
+
+  const [hydrated, setHydrated] = useState(false); // <- NOVO: evita sobrescrita antes de carregar
 
   // tick visual
   const [nowTick, setNowTick] = useState(Date.now());
@@ -60,6 +58,7 @@ export default function useSharedTimer({ onStop } = {}) {
       setStartMs(st.startMs);
       setRunning(st.running);
     }
+    setHydrated(true); // <- só depois de carregar (mesmo que vazio)
 
     // canal entre abas
     try {
@@ -102,12 +101,13 @@ export default function useSharedTimer({ onStop } = {}) {
     window.dispatchEvent(new CustomEvent("timer-sync", { detail: state }));
   }, []);
 
-  // persiste + broadcast a cada mudança
+  // persiste + broadcast somente após hidratação
   useEffect(() => {
+    if (!hydrated) return; // <- evita sobrescrever com zeros/pausa
     const state = { baseElapsedMs, startMs, running };
     saveState(state);
     broadcast(state);
-  }, [baseElapsedMs, startMs, running, broadcast]);
+  }, [baseElapsedMs, startMs, running, broadcast, hydrated]);
 
   // animação enquanto rodando
   useEffect(() => {
@@ -175,7 +175,8 @@ export default function useSharedTimer({ onStop } = {}) {
   // segurança em reload/close
   useEffect(() => {
     const handleBeforeUnload = () => {
-      saveState({ baseElapsedMs, startMs, running });
+      const state = { baseElapsedMs, startMs, running };
+      saveState(state);
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -183,15 +184,14 @@ export default function useSharedTimer({ onStop } = {}) {
 
   /**
    * Rebroadcast imediato do estado atual (útil antes de abrir o Dialog).
-   * Garante que o componente que montar em seguida hidrate com os valores correntes
-   * mesmo se o último broadcast tiver sido há algum tempo.
+   * Só dispara se já estiver hidratado.
    */
   const syncNow = useCallback(() => {
+    if (!hydrated) return;
     const state = { baseElapsedMs, startMs, running };
-    // salva de novo e emite
     saveState(state);
     broadcast(state);
-  }, [baseElapsedMs, startMs, running, broadcast]);
+  }, [hydrated, baseElapsedMs, startMs, running, broadcast]);
 
   return {
     running,
@@ -200,6 +200,6 @@ export default function useSharedTimer({ onStop } = {}) {
     onToggle,
     onReset,
     stop,
-    syncNow, // ← exposto para o Home usar antes de abrir o Dialog
+    syncNow,
   };
 }
