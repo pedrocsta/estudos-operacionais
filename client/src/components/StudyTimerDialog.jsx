@@ -6,8 +6,6 @@ import RestartIcon from "../assets/icons/restart.svg";
 import MinimizeIcon from "../assets/icons/minimize.svg";
 
 const logoSrc = "/logo.png";
-const STORAGE_KEY = "study_timer_state_v1";
-const CHANNEL_NAME = "study-timer";
 
 function fmtHMS(tSec) {
   const h = Math.floor(tSec / 3600).toString().padStart(2, "0");
@@ -16,80 +14,86 @@ function fmtHMS(tSec) {
   return `${h}:${m}:${s}`;
 }
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (
-      typeof parsed?.baseElapsedMs === "number" &&
-      (typeof parsed?.startMs === "number" || parsed?.startMs === null) &&
-      typeof parsed?.running === "boolean"
-    ) {
-      return parsed;
-    }
-  } catch {}
-  return null;
-}
+/**
+ * StudyTimerDialog sincronizado por relógio do sistema.
+ *
+ * Props:
+ * - onClose?: () => void
+ * - onStop?: (formattedElapsed: string) => void
+ * - timerKey?: string   // chave do localStorage (default: "study_timer_v1")
+ *
+ * Como funciona:
+ * - Ao iniciar, salva startWallMs = Date.now() no localStorage.
+ * - elapsed = baseElapsedMs + (Date.now() - startWallMs) quando running = true.
+ * - Pausas consolidam no baseElapsedMs.
+ * - Ao reabrir a página (ou voltar do background), o cálculo continua correto.
+ */
+export default function StudyTimerDialog({ onClose, onStop, timerKey = "study_timer_v1" }) {
+  // Estado persistido
+  const [running, setRunning] = useState(false);
+  const [startWallMs, setStartWallMs] = useState(null); // Date.now() quando deu play
+  const [baseElapsedMs, setBaseElapsedMs] = useState(0); // acumulado de sessões anteriores
 
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
-}
-
-export default function StudyTimerDialog({
-  onClose,
-  onStop,
-}) {
-  // Estado persistente
-  const [baseElapsedMs, setBaseElapsedMs] = useState(0); // acumulado
-  const [startMs, setStartMs] = useState(null);          // inicio da corrida atual
-  const [running, setRunning] = useState(false);         // está rodando?
-
-  // Re-render para animar quando visível
+  // Apenas para animar a UI quando a aba está visível
   const [nowTick, setNowTick] = useState(Date.now());
   const rafRef = useRef(null);
-  const bcRef = useRef(null);
   const panelRef = useRef(null);
 
-  // Hidratação inicial do storage
-  useEffect(() => {
-    const st = loadState();
-    if (st) {
-      setBaseElapsedMs(st.baseElapsedMs);
-      setStartMs(st.startMs);
-      setRunning(st.running);
-    }
-    // Canal para sincronizar entre abas
+  // Helpers de storage
+  const load = useCallback(() => {
     try {
-      const bc = new BroadcastChannel(CHANNEL_NAME);
-      bc.onmessage = (ev) => {
-        const msg = ev.data;
-        if (msg?.type === "timer-sync" && msg?.payload) {
-          const { baseElapsedMs, startMs, running } = msg.payload;
-          setBaseElapsedMs(baseElapsedMs);
-          setStartMs(startMs);
-          setRunning(running);
-        }
-      };
-      bcRef.current = bc;
-      return () => bc.close();
-    } catch {
-      bcRef.current = null;
-    }
-  }, []);
+      const raw = localStorage.getItem(timerKey);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (
+        typeof s?.baseElapsedMs === "number" &&
+        (typeof s?.startWallMs === "number" || s?.startWallMs === null) &&
+        typeof s?.running === "boolean"
+      ) {
+        return s;
+      }
+    } catch {}
+    return null;
+  }, [timerKey]);
 
-  // Persistência a cada mudança relevante
+  const save = useCallback(
+    (state) => {
+      try {
+        localStorage.setItem(timerKey, JSON.stringify(state));
+      } catch {}
+    },
+    [timerKey]
+  );
+
+  // Reidratar ao montar
   useEffect(() => {
-    const state = { baseElapsedMs, startMs, running };
-    saveState(state);
-    if (bcRef.current) {
-      bcRef.current.postMessage({ type: "timer-sync", payload: state });
+    const s = load();
+    if (s) {
+      setRunning(s.running);
+      setStartWallMs(s.startWallMs);
+      setBaseElapsedMs(s.baseElapsedMs);
+    } else {
+      save({ running: false, startWallMs: null, baseElapsedMs: 0 });
     }
-  }, [baseElapsedMs, startMs, running]);
+  }, [load, save]);
 
-  // Loop de UI (apenas quando rodando e aba visível)
+  // Sincronizar entre abas
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== timerKey || e.newValue == null) return;
+      try {
+        const s = JSON.parse(e.newValue);
+        if (!s) return;
+        setRunning(s.running);
+        setStartWallMs(s.startWallMs);
+        setBaseElapsedMs(s.baseElapsedMs);
+      } catch {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [timerKey]);
+
+  // Loop de atualização visual
   useEffect(() => {
     const tick = () => {
       setNowTick(Date.now());
@@ -109,63 +113,67 @@ export default function StudyTimerDialog({
     }
   }, [running]);
 
-  // Calcula o elapsed com base no tempo real
+  // Garante um “refresh” imediato quando a aba volta a ficar visível
+  useEffect(() => {
+    const onVis = () => setNowTick(Date.now());
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Cálculo sincronizado com o relógio do sistema
   const elapsedMs = useMemo(() => {
-    if (running && typeof startMs === "number") {
-      // Mesmo se a UI “parar” em background/fechada, este cálculo fica correto ao reabrir
-      return baseElapsedMs + (Date.now() - startMs);
+    if (running && typeof startWallMs === "number") {
+      const delta = Date.now() - startWallMs;
+      return Math.max(0, baseElapsedMs + delta); // clamp evita valores negativos se o relógio do SO recuar
     }
     return baseElapsedMs;
-  }, [running, startMs, baseElapsedMs, nowTick]);
+  }, [running, startWallMs, baseElapsedMs, nowTick]);
 
   const elapsedSec = Math.floor(elapsedMs / 1000);
 
-  // Alterna entre iniciar/pausar com precisão e persistência
+  // Persistir a cada mudança
+  useEffect(() => {
+    save({ running, startWallMs, baseElapsedMs });
+  }, [running, startWallMs, baseElapsedMs, save]);
+
+  // Ações
   const onToggle = useCallback(() => {
     setRunning((prev) => {
       if (prev) {
-        // Pausar: consolidar o delta atual no baseElapsedMs
+        // Pausar: consolidar delta no baseElapsedMs
         setBaseElapsedMs((ms) => {
-          if (startMs == null) return ms;
-          return ms + (Date.now() - startMs);
+          if (typeof startWallMs !== "number") return ms;
+          const total = ms + (Date.now() - startWallMs);
+          return Math.max(0, total);
         });
-        setStartMs(null);
+        setStartWallMs(null);
         return false;
       } else {
-        // Iniciar: registrar o ponto de partida agora
-        setStartMs(Date.now());
+        // Iniciar: gravar hora de play
+        setStartWallMs(Date.now());
         return true;
       }
     });
-  }, [startMs]);
+  }, [startWallMs]);
 
-  // Reset total (mantém consistência mesmo se estiver rodando)
   const onReset = useCallback(() => {
+    // Zera acumulado; se estiver rodando, reinicia a partir de agora
     setBaseElapsedMs(0);
-    setStartMs((curStart) => (running ? Date.now() : null));
+    setStartWallMs((cur) => (running ? Date.now() : null));
   }, [running]);
 
-  // Parar e salvar
   const stop = useCallback(() => {
-    // Consolidar antes de parar
-    let totalMs = baseElapsedMs;
-    if (running && startMs != null) {
-      totalMs = baseElapsedMs + (Date.now() - startMs);
+    // Consolida antes de parar
+    let total = baseElapsedMs;
+    if (running && typeof startWallMs === "number") {
+      total = baseElapsedMs + (Date.now() - startWallMs);
     }
-    setBaseElapsedMs(totalMs);
+    total = Math.max(0, total);
+    setBaseElapsedMs(total);
     setRunning(false);
-    setStartMs(null);
-    onStop?.(fmtHMS(Math.floor(totalMs / 1000)));
-  }, [onStop, baseElapsedMs, running, startMs]);
-
-  // Segurança: se a aba for fechada/recarregada enquanto rodando, o storage já tem startMs/running
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      saveState({ baseElapsedMs, startMs, running });
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [baseElapsedMs, startMs, running]);
+    setStartWallMs(null);
+    onStop?.(fmtHMS(Math.floor(total / 1000)));
+  }, [onStop, baseElapsedMs, running, startWallMs]);
 
   return (
     <div className="rs-overlay dialog-time">
@@ -188,11 +196,7 @@ export default function StudyTimerDialog({
             height: "100vh",
           }}
         >
-          <img
-            src={logoSrc}
-            alt="Logo"
-            style={{ width: 110, height: "auto" }}
-          />
+          <img src={logoSrc} alt="Logo" style={{ width: 110, height: "auto" }} />
 
           <div
             style={{
