@@ -1,0 +1,333 @@
+p {margin: 0;}
+
+/* ==================== LISTA ==================== */
+.q-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3); /* espaço entre cards */
+}
+
+.q-wrap {
+  margin: 0;
+  padding: 0;
+}
+
+/* ==================== PARTES ==================== */
+.q-part {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: var(--space-3);
+}
+
+/* header: bordas de cima arredondadas */
+.q-part--head {
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #2A2A2A;
+  padding: 0.75rem 1rem;
+}
+
+.q-part--head strong {
+  font-size: 1.25rem;
+}
+
+/* subtopic/meta: cola embaixo do header */
+.q-part--meta {
+  border-top: 0;
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.92rem;
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+}
+
+/* body: enunciado, alternativas */
+.q-part--body {
+  border-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* foot: bordas de baixo arredondadas */
+.q-part--foot {
+  border-top: 1px solid var(--border);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  padding: 0;
+  background: var(--panel);
+  border-top: 0;
+}
+
+/* ==================== CONTEÚDO INTERNO ==================== */
+.q-subtopic {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.q-statement {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* ---------- Alternativas como botões ---------- */
+.q-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0 !important;
+}
+
+.q-opt {
+  position: relative;
+  color: #A7A7A7;
+  margin: 0.3rem 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.q-opt:hover {
+  color: #fff;
+}
+
+/* radio escondido */
+.q-opt__radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* quadradinho da letra */
+.q-opt__letter {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* texto da alternativa */
+.q-opt__text {
+  line-height: 1.3;
+  color: inherit;
+  font-weight: 400;
+}
+
+/* estado selecionado */
+.q-opt.is-selected {
+  color: #fff;
+}
+.q-opt.is-selected .q-opt__text {
+  color: #fff;
+  font-weight: 600;
+}
+.q-opt.is-selected .q-opt__letter {
+  background: #9b9b9b2e;
+  border-color: #2A2A2A;
+  font-weight: 900;
+  color: #fff;
+}
+
+/* ---------- Botão "Responder" ---------- */
+.q-submit {
+  margin-top: 12px;
+  padding: 16px 120px;
+  border: 0;
+  background: #687364;
+  color: #0f140f;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-transform: uppercase;
+  width: fit-content;        /* largura mínima do conteúdo */
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+.q-submit:hover {
+  background-color: #434a40;
+}
+
+.q-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ==================== DETALHES/COMENTÁRIO ==================== */
+.q-details {
+  background: #111;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+.q-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0 !important;
+}
+.q-pre {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  margin-top: var(--space-2);
+}
+
+/* ==================== BOTÃO DO COMENTÁRIO ==================== */
+.q-comment-toggle {
+  font-family: var(--font-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 12px 16px;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.q-comment-toggle:hover {
+  background: #1f1f1f;
+  border-bottom-left-radius: var(--radius);
+}
+
+.q-comment-toggle.is-open {
+  border-bottom-left-radius: 0;
+  background: #1f1f1f;
+}
+
+.q-comment-icon {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.q-answer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  font-size: 0.95rem;
+  color: var(--text);
+  background: #1f1f1f;
+}
+
+/* ==================== LADO A LADO: BOTÃO + RESULTADO ==================== */
+/* Container: ocupa só 50% do card, sem cantos arredondados */
+.q-actions {
+  --bar-h: 35%;           /* altura da faixa escura (ajuste fino aqui) */
+  display: flex;
+  width: 60%;
+  height: 48px;
+  margin-top: 12px;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Botão: força metade exata e anula o padding gigante só aqui */
+.q-actions .q-submit {
+  flex: 1 0 0;
+  width: auto !important;
+  margin: 0;
+  padding: 0 !important;      /* zera o 16px 120px apenas neste layout */
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Painel de resultado: metade exata; grid = área clara + faixa escura */
+.q-result {
+  flex: 1 0 0;
+  min-width: 0;
+  height: 100%;
+  border-radius: 0;
+  display: grid;
+  grid-template-rows: 1fr var(--bar-h);
+  align-items: center;         /* centraliza vertical na área clara */
+  justify-items: center;       /* centraliza horizontal */
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Título (área clara) centralizado perfeito */
+.q-result__title {
+  font-size: 0.95rem;
+  line-height: 1;
+  align-self: center;
+  justify-self: center;
+}
+
+/* Faixa escura MENOR e colada embaixo */
+.q-result__sub {
+  width: 100%;
+  height: 100%;
+  grid-row: 2 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Paletas */
+.q-result.is-correct {
+  background: #90b7f3;
+  color: #101417;
+}
+.q-result.is-correct .q-result__sub {
+  background: #6e8dba;
+  color: #0d1420;
+}
+
+.q-result.is-wrong {
+  background: #e36a6a;
+  color: #2b0f0f;
+}
+.q-result.is-wrong .q-result__sub {
+  background: #8e3c3c;
+  color: #240a0a;
+}
+
+.q-result.is-error {
+  background: #c0b27a;
+  color: #1a1405;
+}
+.q-result.is-error .q-result__sub {
+  background: #8f8357;
+  color: #140f04;
+}
+
+/* ==================== ESTILOS DAS ALTERNATIVAS (após resposta) ==================== */
+
+/* Alternativa correta */
+.q-opt.is-right .q-opt__letter {
+  background: #90b7f3;                 /* quadradinho verde */
+  border-color: #6e8dba;
+  color: #fff;
+}
+
+/* Alternativa escolhida errada */
+.q-opt.is-wrong .q-opt__letter {
+  background: #e36a6a;                 /* quadradinho vermelho */
+  border-color: #8e3c3c;
+  color: #fff;
+}

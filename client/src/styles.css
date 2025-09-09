@@ -1359,8 +1359,6 @@ label {
   cursor: not-allowed;
 }
 
-.btn-dialog-time.play-btn-dialog:hover { background-color: #434a40; }
-
 .pause-btn-dialog { background-color: #8a3a3a; }
 .btn-dialog-time.pause-btn-dialog:hover { background-color: #5c2727; }
 
