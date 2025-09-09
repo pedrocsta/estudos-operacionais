@@ -2005,3 +2005,8 @@ label {
   color: var(--danger);
   font-size: .95rem;
 }
+
+.btn-dialog-time:disabled { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+}
