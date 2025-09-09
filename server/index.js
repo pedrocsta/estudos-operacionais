@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 
+// ===== Acesso ao SQLite (questoes.db) =====
+import { getQuestionsDb } from "./sqlite.js";
+
 dotenv.config();
 
 const app = express();
@@ -12,22 +15,23 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
 // Suporta múltiplas origens separadas por vírgula (ex.: "http://localhost:5173,https://xxx.pages.dev")
-const ORIGINS =
-  (process.env.CORS_ORIGIN || "http://localhost:5173")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
+const ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // CORS com lista de origens permitidas
-app.use(cors({
-  origin(origin, cb) {
-    if (!origin) return cb(null, true); // permite health checks e calls internas
-    if (ORIGINS.includes(origin)) return cb(null, true);
-    return cb(new Error("Origin not allowed by CORS"));
-  },
-  credentials: true,
-  allowedHeaders: ["Content-Type", "x-admin-email"], // garante o header customizado
-}));
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin) return cb(null, true); // permite health checks e calls internas
+      if (ORIGINS.includes(origin)) return cb(null, true);
+      return cb(new Error("Origin not allowed by CORS"));
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "x-admin-email"], // garante o header customizado
+  })
+);
 
 app.use(express.json());
 
@@ -44,14 +48,18 @@ app.post("/api/auth/signup", async (req, res) => {
     if (!firstName || !lastName || !email || !password)
       return res.status(400).json({ message: "Preencha todos os campos." });
     if (password.length < 8)
-      return res.status(400).json({ message: "A senha deve ter pelo menos 8 caracteres." });
+      return res
+        .status(400)
+        .json({ message: "A senha deve ter pelo menos 8 caracteres." });
 
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const existing = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
     if (existing) return res.status(409).json({ message: "E-mail já cadastrado." });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { firstName, lastName, email: email.toLowerCase(), passwordHash }
+      data: { firstName, lastName, email: email.toLowerCase(), passwordHash },
     });
 
     res.status(201).json(pubUser(user));
@@ -64,7 +72,9 @@ app.post("/api/auth/signup", async (req, res) => {
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    const user = await prisma.user.findUnique({ where: { email: (email || "").toLowerCase() } });
+    const user = await prisma.user.findUnique({
+      where: { email: (email || "").toLowerCase() },
+    });
     if (!user) return res.status(404).json({ message: "Usuário não encontrado." });
 
     const ok = await bcrypt.compare(password || "", user.passwordHash);
@@ -81,7 +91,6 @@ app.delete("/api/users/:id", async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.$transaction(async (tx) => {
-      // apague *todas* as dependências do usuário
       await tx.studyDetail.deleteMany({ where: { userId: id } });
       await tx.studyRecord.deleteMany({ where: { userId: id } });
       await tx.weeklyGoalSetting.deleteMany({ where: { userId: id } });
@@ -95,8 +104,9 @@ app.delete("/api/users/:id", async (req, res) => {
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
     if (e?.code === "P2003") {
-      // FK ainda existente em alguma tabela
-      return res.status(409).json({ error: "Não foi possível excluir: existem dados vinculados ao usuário." });
+      return res
+        .status(409)
+        .json({ error: "Não foi possível excluir: existem dados vinculados ao usuário." });
     }
     console.error("DELETE /api/users/:id failed:", e);
     res.status(500).json({ error: "Erro ao excluir usuário" });
@@ -105,7 +115,6 @@ app.delete("/api/users/:id", async (req, res) => {
 
 app.get("/api/stats/overview", async (req, res) => {
   try {
-    // proteção simples por e-mail vindo do header (evita expor publicamente)
     const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase();
     const requester = String(req.header("x-admin-email") || "").toLowerCase();
     if (!adminEmail || requester !== adminEmail) {
@@ -123,7 +132,6 @@ app.get("/api/stats/overview", async (req, res) => {
     res.status(500).json({ error: "Erro ao carregar estatísticas" });
   }
 });
-
 
 /* ================== SUBJECTS ================== */
 app.get("/api/subjects", async (req, res) => {
@@ -165,8 +173,10 @@ app.post("/api/subjects", async (req, res) => {
 
     res.status(201).json(created);
   } catch (e) {
-    if (e && e.code === "P2002") return res.status(409).json({ error: "Já existe uma disciplina com esse nome" });
-    if (e && e.code === "P2003") return res.status(400).json({ error: "Usuário inválido" });
+    if (e && e.code === "P2002")
+      return res.status(409).json({ error: "Já existe uma disciplina com esse nome" });
+    if (e && e.code === "P2003")
+      return res.status(400).json({ error: "Usuário inválido" });
     console.error("POST /api/subjects failed:", e);
     res.status(500).json({ error: "Erro ao criar disciplina" });
   }
@@ -181,11 +191,16 @@ app.put("/api/subjects/:id", async (req, res) => {
     if (!name) return res.status(400).json({ error: "Informe um nome" });
     if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return res.status(400).json({ error: "Cor inválida. Use #RRGGBB." });
 
-    const updated = await prisma.subject.update({ where: { id }, data: { name, color } });
+    const updated = await prisma.subject.update({
+      where: { id },
+      data: { name, color },
+    });
     res.json(updated);
   } catch (e) {
-    if (e && e.code === "P2025") return res.status(404).json({ error: "Disciplina não encontrada" });
-    if (e && e.code === "P2002") return res.status(409).json({ error: "Já existe uma disciplina com esse nome" });
+    if (e && e.code === "P2025")
+      return res.status(404).json({ error: "Disciplina não encontrada" });
+    if (e && e.code === "P2002")
+      return res.status(409).json({ error: "Já existe uma disciplina com esse nome" });
     console.error("PUT /api/subjects/:id failed:", e);
     res.status(500).json({ error: "Erro ao atualizar disciplina" });
   }
@@ -197,10 +212,14 @@ app.delete("/api/subjects/:id", async (req, res) => {
     await prisma.subject.delete({ where: { id } });
     res.status(200).json({ ok: true });
   } catch (e) {
-    if (e && e.code === "P2025") return res.status(404).json({ error: "Disciplina não encontrada" });
-    if (e && e.code === "P2003") return res.status(409).json({ error: "Não é possível excluir: há estudos vinculados a esta disciplina." });
+    if (e && e.code === "P2025")
+      return res.status(404).json({ error: "Disciplina não encontrada" });
+    if (e && e.code === "P2003")
+      return res
+        .status(409)
+        .json({ error: "Não é possível excluir: há estudos vinculados a esta disciplina." });
     console.error("DELETE /api/subjects/:id failed:", e);
-    res.status(500).json({ error: "Erro ao excluir disciplina" });
+    res.status(500).json({ error: "Erro ao excluir usuário" });
   }
 });
 
@@ -208,7 +227,9 @@ app.delete("/api/subjects/:id", async (req, res) => {
 function hmsToMinutes(hms) {
   const m = /^(\d{2}):(\d{2}):(\d{2})$/.exec(String(hms || ""));
   if (!m) return null;
-  const h = Number(m[1]), mm = Number(m[2]), s = Number(m[3]);
+  const h = Number(m[1]),
+    mm = Number(m[2]),
+    s = Number(m[3]);
   return Math.floor(h * 60 + mm + s / 60);
 }
 function parseFlexibleHmsToMinutes(hms) {
@@ -216,13 +237,16 @@ function parseFlexibleHmsToMinutes(hms) {
   const str = String(hms);
   let m = /^(\d{1,2}):(\d{2}):(\d{2})$/.exec(str);
   if (m) {
-    const h = Number(m[1]), mm = Number(m[2]), s = Number(m[3]);
+    const h = Number(m[1]),
+      mm = Number(m[2]),
+      s = Number(m[3]);
     if ([h, mm, s].some((x) => Number.isNaN(x))) return null;
     return Math.floor(h * 60 + mm + s / 60);
   }
   m = /^(\d{1,2}):(\d{2})$/.exec(str);
   if (m) {
-    const h = Number(m[1]), mm = Number(m[2]);
+    const h = Number(m[1]),
+      mm = Number(m[2]);
     if ([h, mm].some((x) => Number.isNaN(x))) return null;
     return h * 60 + mm;
   }
@@ -259,7 +283,9 @@ app.post("/api/studies", async (req, res) => {
       if (durationMin == null) durationMin = hmsToMinutes(duration);
     }
     if (durationMin == null) {
-      return res.status(400).json({ error: "Tempo inválido. Use HH:MM:SS ou envie durationMin em minutos." });
+      return res
+        .status(400)
+        .json({ error: "Tempo inválido. Use HH:MM:SS ou envie durationMin em minutos." });
     }
 
     const [user, subject] = await Promise.all([
@@ -267,7 +293,8 @@ app.post("/api/studies", async (req, res) => {
       prisma.subject.findUnique({ where: { id: String(subjectId) } }),
     ]);
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-    if (!subject || subject.userId !== userId) return res.status(404).json({ error: "Disciplina inválida" });
+    if (!subject || subject.userId !== userId)
+      return res.status(404).json({ error: "Disciplina inválida" });
 
     let studyDateObj = new Date();
     if (studyDate && /^\d{4}-\d{2}-\d{2}$/.test(studyDate)) {
@@ -295,7 +322,9 @@ app.post("/api/studies", async (req, res) => {
     res.status(201).json(created);
   } catch (e) {
     if (e && e.code === "P2003") {
-      return res.status(400).json({ error: "Relação inválida: verifique usuário e disciplina." });
+      return res
+        .status(400)
+        .json({ error: "Relação inválida: verifique usuário e disciplina." });
     }
     console.error("POST /api/studies failed:", e);
     res.status(500).json({ error: "Erro ao salvar estudo" });
@@ -328,17 +357,17 @@ app.get("/api/studies/days", async (req, res) => {
     const [records, details] = await Promise.all([
       prisma.studyRecord.findMany({
         where: { userId, studyDate: { gte: start, lt: tomorrowStart } },
-        select: { studyDate: true }
+        select: { studyDate: true },
       }),
       prisma.studyDetail.findMany({
         where: { userId, studyDate: { gte: start, lt: tomorrowStart } },
-        select: { studyDate: true }
-      })
+        select: { studyDate: true },
+      }),
     ]);
 
     const studiedSet = new Set([
       ...records.map((r) => ymdLocal(toLocalDateOnly(new Date(r.studyDate)))),
-      ...details.map((d) => ymdLocal(toLocalDateOnly(new Date(d.studyDate))))
+      ...details.map((d) => ymdLocal(toLocalDateOnly(new Date(d.studyDate)))),
     ]);
 
     const estudos = [];
@@ -346,7 +375,7 @@ app.get("/api/studies/days", async (req, res) => {
       const key = ymdLocal(d);
       estudos.push({
         data: d.toLocaleDateString("pt-BR"),
-        estudou: studiedSet.has(key)
+        estudou: studiedSet.has(key),
       });
     }
 
@@ -363,8 +392,9 @@ app.get("/api/studies", async (req, res) => {
     if (!userId) return res.status(400).json({ error: "userId é obrigatório" });
 
     const fromStr = req.query.from; // "YYYY-MM-DD"
-    const toStr = req.query.to;     // "YYYY-MM-DD" (inclusive)
-    const order = (req.query.order || "desc").toString().toLowerCase() === "asc" ? "asc" : "desc";
+    const toStr = req.query.to; // "YYYY-MM-DD" (inclusive)
+    const order =
+      (req.query.order || "desc").toString().toLowerCase() === "asc" ? "asc" : "desc";
     const limit = Math.min(Math.max(parseInt(req.query.limit || "50", 10), 1), 200);
     const offset = Math.max(parseInt(req.query.offset || "0", 10), 0);
 
@@ -400,54 +430,141 @@ app.get("/api/studies", async (req, res) => {
   }
 });
 
-app.delete("/api/studies/:id", async (req, res) => {
+/* ================== QUESTIONS (SQLite: questoes.db) ================== */
+
+// Mapper (inclui subtopico_caminho diretamente da tabela question)
+function mapQuestionRow(row) {
+  let alternatives = [];
+  try { alternatives = JSON.parse(row.alternatives || "[]"); } catch {}
+  return {
+    id: row.id,
+    year: row.year,
+    board: row.board_name || null,
+    subject: row.subject_name || null,
+    topic: row.topic_name || null,
+    subtopico_caminho: row.subtopico_caminho || null, // ← vem de q.subtopico_caminho
+    level: row.level_name || null,
+    alternativesCount: row.alternatives_count,
+    correctLetter: row.correct_letter,
+    statement: row.statement,
+    supportText: row.support_text,
+    commentText: row.comment_text,
+    commentHtml: row.comment_html,
+    alternatives,
+  };
+}
+
+// GET /api/questions?search=&subject=&board=&year=&topic=&level=&page=1&pageSize=20
+app.get("/api/questions", (req, res) => {
   try {
-    const { id } = req.params;
-    await prisma.studyDetail.delete({ where: { id } });
-    res.json({ ok: true, deletedId: id });
-  } catch (e) {
-    if (e && e.code === "P2025") {
-      return res.status(404).json({ error: "Estudo não encontrado" });
+    const db = getQuestionsDb();
+
+    const {
+      search = "",
+      subject = "",
+      board = "",
+      topic = "",
+      level = "",
+      year = "",
+      page = "1",
+      pageSize = "20",
+    } = req.query;
+
+    const p = Math.max(parseInt(page, 10) || 1, 1);
+    const ps = Math.min(Math.max(parseInt(pageSize, 10) || 20, 1), 100);
+
+    const where = [];
+    const params = {};
+
+    if (search) {
+      where.push("(q.statement LIKE @search OR q.support_text LIKE @search)");
+      params.search = `%${search}%`;
     }
-    console.error("DELETE /api/studies/:id failed:", e);
-    res.status(500).json({ error: "Erro ao excluir estudo" });
-  }
-});
+    if (subject) {
+      where.push("s.name = @subject");
+      params.subject = String(subject);
+    }
+    if (board) {
+      where.push("b.name = @board");
+      params.board = String(board);
+    }
+    if (topic) {
+      // filtra pelo nome do tópico (rótulo curto salvo na tabela topic)
+      where.push("t.name = @topic");
+      params.topic = String(topic);
+    }
+    if (level) {
+      where.push("l.name = @level");
+      params.level = String(level);
+    }
+    if (year) {
+      where.push("q.year = @year");
+      params.year = Number(year);
+    }
 
-/* ================== GOALS (Weekly fixed) ================== */
-app.get("/api/goals/weekly-setting", async (req, res) => {
-  try {
-    const userId = String(req.query.userId || "");
-    if (!userId) return res.status(400).json({ error: "userId é obrigatório" });
-    const setting = await prisma.weeklyGoalSetting.findUnique({ where: { userId } });
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const baseSelect = `
+      FROM question q
+      LEFT JOIN board   b ON b.id = q.board_id
+      LEFT JOIN subject s ON s.id = q.subject_id
+      LEFT JOIN topic   t ON t.id = q.topic_id
+      LEFT JOIN level   l ON l.id = q.level_id
+      ${whereSql}
+    `;
+
+    const totalRow = db.prepare(`SELECT COUNT(*) as total ${baseSelect}`).get(params);
+    const total = totalRow?.total ?? 0;
+
+    const items = db
+      .prepare(
+        `
+      SELECT
+        q.id, q.year, q.alternatives_count, q.correct_letter,
+        q.statement, q.support_text, q.comment_text, q.comment_html, q.alternatives,
+        q.subtopico_caminho AS subtopico_caminho,        -- << direto da question
+        b.name AS board_name,
+        s.name AS subject_name,
+        t.name AS topic_name,
+        l.name AS level_name
+      ${baseSelect}
+      ORDER BY q.year DESC, q.id ASC
+      LIMIT @limit OFFSET @offset
+    `
+      )
+      .all({ ...params, limit: ps, offset: (p - 1) * ps });
+
     res.json({
-      userId,
-      hoursTargetMin: setting?.hoursTargetMin ?? 0,
-      questionsTarget: setting?.questionsTarget ?? 0,
+      total,
+      page: p,
+      pageSize: ps,
+      items: items.map(mapQuestionRow),
     });
   } catch (e) {
-    console.error("GET /api/goals/weekly-setting failed:", e);
-    res.status(500).json({ error: "Erro ao carregar metas" });
+    console.error("GET /api/questions failed:", e);
+    // Em dev, retorne detalhe do erro para facilitar debug
+    if (process.env.NODE_ENV === "development") {
+      return res.status(500).json({ error: "Erro ao listar questões", detail: String(e?.message || e) });
+    }
+    res.status(500).json({ error: "Erro ao listar questões" });
   }
 });
 
-app.put("/api/goals/weekly-setting", async (req, res) => {
+// Metadados para filtros (boards, subjects, topics, levels, years)
+app.get("/api/questions/meta", (req, res) => {
   try {
-    const { userId, hoursTargetMin, questionsTarget } = req.body || {};
-    if (!userId) return res.status(400).json({ error: "userId é obrigatório" });
-    const h = Math.max(0, Math.floor(Number(hoursTargetMin) || 0));
-    const q = Math.max(0, Math.floor(Number(questionsTarget) || 0));
-
-    const up = await prisma.weeklyGoalSetting.upsert({
-      where: { userId: String(userId) },
-      create: { userId: String(userId), hoursTargetMin: h, questionsTarget: q },
-      update: { hoursTargetMin: h, questionsTarget: q },
+    const db = getQuestionsDb();
+    const pick = (sql) => db.prepare(sql).all().map((r) => r.name ?? r.year);
+    res.json({
+      boards:   pick("SELECT name FROM board ORDER BY name"),
+      subjects: pick("SELECT name FROM subject ORDER BY name"),
+      topics:   pick("SELECT name FROM topic ORDER BY name"),  // rótulo curto
+      levels:   pick("SELECT name FROM level ORDER BY name"),
+      years:    db.prepare("SELECT DISTINCT year FROM question WHERE year IS NOT NULL ORDER BY year DESC").all().map((r) => r.year),
     });
-
-    res.json(up);
   } catch (e) {
-    console.error("PUT /api/goals/weekly-setting failed:", e);
-    res.status(500).json({ error: "Erro ao salvar metas" });
+    console.error("GET /api/questions/meta failed:", e);
+    res.status(500).json({ error: "Erro ao carregar metadados" });
   }
 });
 

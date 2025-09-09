@@ -65,7 +65,7 @@ a {
 /* ======================================================================= */
 
 .container {
-  max-width: 1875px;
+  max-width: 1800px;
   margin: 0 auto;
   padding: var(--space-3);
 }
@@ -1171,6 +1171,7 @@ label {
 .daily__arrow {
   width: 34px;
   height: 28px;
+  padding: 0 !important;
   display: grid;
   place-items: center;
 }
@@ -1364,3 +1365,200 @@ label {
 
 /* hover dos demais */
 .btn-dialog-time:hover { background-color: #2B2B2B; }
+
+/* ======================================================================= */
+/* QUESTÕES                                                                */
+/* ======================================================================= */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-3);
+}
+
+.page h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.inp, .sel {
+  background: var(--bg);
+  color: var(--text);
+  border: var(--border-w) solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  height: 38px;
+}
+.inp:focus, .sel:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.pager__spacer {
+  flex: 1;
+}
+
+/* =================== DROPDOWN DE DISCIPLINA =================== */
+.dd { position: relative; min-width: 180px; }
+
+.dd__btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: #1A1A1A;
+  border: var(--border-w) solid #3A3A3A;
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.dd__btn:hover,
+.dd__btn--active {
+  background-color: #2B2B2B;
+}
+
+.dd__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
+  border-radius: var(--radius);
+  z-index: 50;
+  padding: var(--space-2);
+}
+
+.dd__search {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.dd__search input {
+  flex: 1;
+  background: #121212;
+  border: 1px solid #2A2A2A;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 6px 8px;
+}
+.dd__clear {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dd__list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dd__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.dd__item input {
+  accent-color: var(--accent);
+}
+.dd__empty {
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+/* =================== LISTA DE QUESTÕES =================== */
+.q-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.q-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.q-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 1.1rem;
+  margin-bottom: var(--space-2);
+}
+.q-header strong { color: var(--accent); }
+.q-subtopic { color: var(--muted); font-size: 0.9rem; }
+
+.q-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.q-statement {
+  white-space: pre-wrap;
+}
+
+.q-details {
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font-size: 0.9rem;
+}
+.q-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.q-pre {
+  white-space: pre-wrap;
+  margin-top: 6px;
+}
+
+.q-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+.q-alt__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.q-alt__row input {
+  accent-color: var(--accent);
+}
+
+/* estados de erro e carregamento */
+.err { color: var(--danger); font-size: 0.95rem; }
