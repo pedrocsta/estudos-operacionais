@@ -20,6 +20,8 @@ import StopIcon from "../assets/icons/stop.svg";
 import RestartIcon from "../assets/icons/restart.svg";
 import MaximizeIcon from "../assets/icons/maximize.svg";
 
+import useSharedTimer, { fmtHMS } from "../hooks/useSharedTimer.js";
+
 const API_BASE = import.meta.env.VITE_API_URL || ""; // "" => mesmo host (proxy)
 
 // util: minutos -> "Xh Ymin"
@@ -32,14 +34,6 @@ function fmtDuration(min) {
   return `${m}min`;
 }
 
-// util: segundos -> HH:MM:SS
-function fmtHMS(tSec) {
-  const h = Math.floor(tSec / 3600).toString().padStart(2, "0");
-  const m = Math.floor((tSec % 3600) / 60).toString().padStart(2, "0");
-  const s = Math.floor(tSec % 60).toString().padStart(2, "0");
-  return `${h}:${m}:${s}`;
-}
-
 export default function Home() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
@@ -47,22 +41,16 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const popRef = useRef(null);
   const [showDialog, setShowDialog] = useState(false);
-
-  // ===== Timer controlado no Home (sincroniza com o dialog) =====
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0); // em segundos
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    if (!running) return;
-    intervalRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
-    return () => clearInterval(intervalRef.current);
-  }, [running]);
-
-  const onToggle = () => setRunning((v) => !v);
-  const onReset = () => setElapsed(0);
-
   const [showTimer, setShowTimer] = useState(false);
+
+  // ===== Timer compartilhado (fonte única) =====
+  const { running, elapsedSec, onToggle, onReset, stop } = useSharedTimer({
+    onStop: (hhmmss) => {
+      // STOP vindo do dialog de timer
+      setPrefillDuration(hhmmss);
+      setShowDialog(true);
+    },
+  });
 
   // duração para pré-preencher o AddStudyDialog quando vier do cronômetro
   const [prefillDuration, setPrefillDuration] = useState("00:00:00");
@@ -82,18 +70,11 @@ export default function Home() {
     navigate("/");
   };
 
-  // STOP: abre AddStudyDialog por cima (sem fechar o timer)
+  // STOP pela toolbar do Home → consolida, abre AddStudyDialog
   function handleStopFromToolbar() {
-    setPrefillDuration(fmtHMS(elapsed));
+    setPrefillDuration(fmtHMS(elapsedSec));
+    stop(); // consolida e pausa
     setShowDialog(true);
-    setRunning(false);
-  }
-
-  // STOP vindo do dialog (expando → stop lá em cima)
-  function handleStopFromTimerDialog(hhmmss) {
-    setPrefillDuration(hhmmss || fmtHMS(elapsed));
-    setShowDialog(true);
-    setRunning(false);
   }
 
   /* ================== ESTATÍSTICAS (somente para MASTER) ================== */
@@ -280,11 +261,11 @@ export default function Home() {
               <button
                 className="btn-dialog-time"
                 onClick={onReset}
-                disabled={elapsed === 0}
+                disabled={elapsedSec === 0}
                 title="Reiniciar"
                 aria-label="Reiniciar"
                 style={{
-                  opacity: elapsed === 0 ? 0.5 : 1,
+                  opacity: elapsedSec === 0 ? 0.5 : 1,
                 }}
               >
                 <img src={RestartIcon} alt="" />
@@ -292,12 +273,10 @@ export default function Home() {
 
               {/* Tempo */}
               <div
-                style={{
-                  fontSize: 24,
-                }}
+                style={{ fontSize: 24 }}
                 aria-label="Tempo decorrido"
               >
-                {fmtHMS(elapsed)}
+                {fmtHMS(elapsedSec)}
               </div>
 
               {/* Expandir (abre dialog sincronizado) */}
@@ -374,11 +353,11 @@ export default function Home() {
       {showTimer && (
         <StudyTimerDialog
           onClose={() => setShowTimer(false)}
-          onStop={handleStopFromTimerDialog}
-          elapsed={elapsed}
-          running={running}
-          onToggle={onToggle}
-          onReset={onReset}
+          onStop={(hhmmss) => {
+            // mantém compatibilidade: se o dialog der stop, já abre o AddStudyDialog
+            setPrefillDuration(hhmmss || fmtHMS(elapsedSec));
+            setShowDialog(true);
+          }}
         />
       )}
 
