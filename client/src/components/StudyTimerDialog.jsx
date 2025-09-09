@@ -241,6 +241,9 @@ export default function StudyTimerDialog({
               aria-label="Reiniciar"
               className="btn-dialog-time"
               disabled={elapsedSec === 0}
+              style={{
+                opacity: elapsed === 0 ? 0.5 : 1,
+              }}
             >
               <img src={RestartIcon} alt="" />
             </button>
