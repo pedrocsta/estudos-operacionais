@@ -1310,6 +1310,7 @@ label {
 .play-btn-dialog {
   background-color: #42cc7c;
 }
+
 .btn-dialog-time.play-btn-dialog:hover{
   background-color: #434a40;
 }
@@ -1358,8 +1359,6 @@ label {
   cursor: not-allowed;
 }
 
-/* play / pause (cores que você mandou) */
-.play-btn-dialog { background-color: #687364; }
 .btn-dialog-time.play-btn-dialog:hover { background-color: #434a40; }
 
 .pause-btn-dialog { background-color: #8a3a3a; }
